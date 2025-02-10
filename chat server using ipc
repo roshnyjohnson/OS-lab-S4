@@ -1,0 +1,122 @@
+//User1.c
+
+
+#include<stdio.h>
+#include<sys/mman.h>
+#include<fcntl.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<string.h>
+
+#define NAME "MYAREA"
+
+typedef struct {
+    int datastatus; // 0 for read, 1 for write
+    int exitstatus; // 1 for exit
+    char message[50];
+} shared_area;
+
+int main() {
+    int fd;
+    shared_area *sharedBuffer;
+    char message[128];
+
+    fd = shm_open(NAME, O_CREAT | O_RDWR, 0666);
+    if (fd > 0) {
+        ftruncate(fd, sizeof(shared_area));
+        sharedBuffer = (shared_area *)mmap(0, sizeof(shared_area), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+        // Initialize shared memory structure
+        sharedBuffer->datastatus = 0; // Ready for User 1 to write
+        sharedBuffer->exitstatus = 0;
+
+        while (1) {
+            if (sharedBuffer->datastatus == 0) { // User 1's turn to write
+                printf("User 2 says:\"%s\"\n",sharedBuffer->message);
+                printf("User 1: Enter the message (STOP to exit): ");
+                scanf("%s", message);
+
+                strcpy(sharedBuffer->message, message);
+                sharedBuffer->datastatus = 1; // Notify User 2
+
+                if (strcmp(message, "STOP") == 0) {
+                    sharedBuffer->exitstatus = 1; // Request exit
+                    break;
+                }
+
+                printf("Waiting for User 2's response...\n");
+                while (sharedBuffer->datastatus == 1); // Wait for User 2
+            }
+        }
+
+        munmap(sharedBuffer, sizeof(shared_area));
+        close(fd);
+        shm_unlink(NAME);
+        printf("\nShared memory unlinked. Exiting...\n");
+    } else {
+        printf("Error in creating shared memory.\n");
+    }
+
+    return 0;
+}
+
+
+
+//User2.c
+
+
+#include<stdio.h>
+#include<sys/mman.h>
+#include<fcntl.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<string.h>
+
+#define NAME "MYAREA"
+
+typedef struct {
+    int datastatus; // 0 for read, 1 for write
+    int exitstatus; // 1 for exit
+    char message[50];
+} shared_area;
+
+int main() {
+    int fd;
+    shared_area *sharedBuffer;
+    char message[128];
+
+    fd = shm_open(NAME, O_RDWR, 0666);
+    if (fd > 0) {
+        sharedBuffer = (shared_area *)mmap(0, sizeof(shared_area), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+        while (1) {
+            if (sharedBuffer->datastatus == 1) { // User 2's turn to read and write
+                printf("User 1 says: \"%s\"\n", sharedBuffer->message);
+
+                if (sharedBuffer->exitstatus == 1) {
+                    printf("User 1 requested exit. Exiting...\n");
+                    break;
+                }
+
+                printf("User 2: Enter the response (STOP to exit): ");
+                scanf("%s", message);
+
+                strcpy(sharedBuffer->message, message);
+                sharedBuffer->datastatus = 0; // Notify User 1
+
+                if (strcmp(message, "STOP") == 0) {
+                    sharedBuffer->exitstatus = 1; // Request exit
+                    break;
+                }
+            }
+        }
+
+        munmap(sharedBuffer, sizeof(shared_area));
+        close(fd);
+        printf("\nExiting...\n");
+    } else {
+        printf("Error in accessing shared memory.\n");
+    }
+
+    return 0;
+}
