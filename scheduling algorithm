@@ -1,0 +1,338 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+struct Process {
+    int priority;
+    int id;
+    int arrival_time;
+    int burst_time;
+    int waiting_time;
+    int turnaround_time;
+    int completion_time;
+    int response_time;
+    int remaining_time;
+    bool completed; // Flag to track if the process is completed
+};
+
+int find_next_process(struct Process processes[], int n, int current_time) {
+    int min_burst_time = __INT_MAX__;
+    int index = -1;
+
+    for (int i = 0; i < n; i++) {
+        if (!processes[i].completed && processes[i].arrival_time <= current_time) {
+            if (processes[i].burst_time < min_burst_time) {
+                min_burst_time = processes[i].burst_time;
+                index = i;
+            }
+        }
+    }
+
+    return index;
+}
+void printgantt(struct Process processes[],int n)
+{
+        printf("GANTT CHART:\n");
+        for(int i=0;i<n;i++)
+        {
+                for(int j=0;j<n-i-1;j++)
+                {
+                        if(processes[j].completion_time>processes[j+1].completion_time)
+                        {
+                                struct Process p=processes[j];
+                                processes[j]=processes[j+1];
+                                processes[j+1]=p;
+
+                        }
+                }
+        }
+        for(int i=0;i<n;i++)
+        {
+                printf("|");
+                printf("\tP%d\t",processes[i].id);
+
+
+        }
+        printf("|");
+        printf("\n");printf("0");
+        for(int i=0;i<n;i++)
+        {
+                printf("%16d",processes[i].completion_time);
+        }
+        printf("\n");
+}
+int find_next_process2(struct Process processes[], int n, int current_time) {
+    int highest_priority = __INT_MAX__;
+    int index = -1;
+
+    for (int i = 0; i < n; i++) {
+        if (!processes[i].completed && processes[i].arrival_time <= current_time) {
+            if (processes[i].priority < highest_priority) {
+                highest_priority = processes[i].priority;
+                index = i;
+            } else if (processes[i].priority == highest_priority) {
+
+                if (processes[i].arrival_time < processes[index].arrival_time) {
+                    index = i;
+                }
+            }
+        }
+    }
+
+    return index;
+}
+
+
+void roundRobin(struct Process processes[], int n, int timeQuantum) {
+    int currentTime = 0, completed = 0;
+    int queue[n], front = 0, rear = 0;
+    bool inQueue[40] = {false};
+        int ct[100]={0},w=0;
+    // Initialize remaining times and add first process to the queue
+    for (int i = 0; i < n; i++) {
+        processes[i].remaining_time = processes[i].burst_time;
+        processes[i].response_time= -1;
+    }
+        int pid;
+    for(int i=0;i<n;i++)
+    {
+        if(processes[i].arrival_time == 0)
+        {
+                pid=i;
+        }
+        }
+    queue[rear++] =pid ; // Add the first process to the queue
+    inQueue[0] = true;
+   printf("GANTT CHART:\n");
+    while (completed < n) {
+        int processIndex = queue[front++];
+         // Dequeue the process
+        if(processes[processIndex].response_time == -1)
+        {
+                processes[processIndex].response_time= currentTime- processes[processIndex].arrival_time;
+        }
+        printf("|");
+        printf("P%d",processes[processIndex].id);
+        ct[w++]=currentTime;
+        front %= n;
+
+        if (processes[processIndex].remaining_time > 0) {
+            if (processes[processIndex].remaining_time > timeQuantum) {
+                currentTime += timeQuantum;
+
+                processes[processIndex].remaining_time -= timeQuantum;
+            } else {
+                currentTime += processes[processIndex].remaining_time;
+                processes[processIndex].remaining_time = 0;
+
+                // Process completion
+                processes[processIndex].completion_time = currentTime;
+                processes[processIndex].turnaround_time = currentTime - processes[processIndex].arrival_time;
+                processes[processIndex].waiting_time = processes[processIndex].turnaround_time - processes[processIndex].burst_time;
+                completed++;
+            }
+        }
+
+        // Enqueue newly arrived processes
+        for (int i = 0; i < n; i++) {
+            if (i != processIndex && processes[i].arrival_time <= currentTime && processes[i].remaining_time > 0 && !inQueue[i]) {
+                queue[rear++] = i;
+                rear %= n;
+                inQueue[i] = true;
+            }
+        }
+
+        // Re-enqueue the current process if it still needs processing
+        if (processes[processIndex].remaining_time > 0) {
+            queue[rear++] = processIndex;
+            rear %= n;
+        } else {
+            inQueue[processIndex] = false;
+        }
+    }
+        printf("|");printf("\n");printf("%d",ct[0]);
+        for(int i=1;i<sizeof(ct)/4;i++)
+        {
+                if(ct[i]!=0){
+                printf(" %d ",ct[i]);}
+                else{
+                        break;
+                        }
+        }
+        printf("%d",currentTime);
+}
+
+
+
+
+void calculate_times1(struct Process processes[], int n) {
+    int current_time = 0, completed = 0;
+
+    while (completed < n) {
+        int index = find_next_process(processes, n, current_time);
+
+        if (index == -1) {
+            current_time++;
+            continue;
+        }
+
+        struct Process *current_process = &processes[index];
+
+
+        current_process->response_time = current_time - current_process->arrival_time;
+        current_time += current_process->burst_time;
+        current_process->completion_time = current_time;
+        current_process->turnaround_time = current_process->completion_time - current_process->arrival_time;
+        current_process->waiting_time = current_process->turnaround_time - current_process->burst_time;
+
+        current_process->completed = true;
+        completed++;
+    }
+}
+
+void calculate_times2(struct Process processes[], int n) {
+    int current_time = 0, completed = 0;
+
+    while (completed < n) {
+        int index = find_next_process2(processes, n, current_time);
+
+        if (index == -1) {
+            current_time++;
+            continue;
+        }
+
+        struct Process *current_process = &processes[index];
+
+        current_process->response_time = current_time - current_process->arrival_time;
+        current_time += current_process->burst_time;
+        current_process->completion_time = current_time;
+        current_process->turnaround_time = current_process->completion_time - current_process->arrival_time;
+        current_process->waiting_time = current_process->turnaround_time - current_process->burst_time;
+
+        current_process->completed = true;
+        completed++;
+    }
+}
+
+void calculate_times3(struct Process processes[], int n) {
+    processes[0].waiting_time = 0;
+    processes[0].completion_time = processes[0].arrival_time + processes[0].burst_time;
+    processes[0].turnaround_time = processes[0].completion_time - processes[0].arrival_time;
+    processes[0].response_time = 0;
+
+    for (int i = 1; i < n; i++) {
+
+        if (processes[i - 1].completion_time < processes[i].arrival_time) {
+            processes[i - 1].completion_time = processes[i].arrival_time;
+        }
+
+        processes[i].waiting_time = processes[i - 1].completion_time - processes[i].arrival_time;
+        if (processes[i].waiting_time < 0)
+        processes[i].waiting_time = 0;
+
+        processes[i].completion_time = processes[i - 1].completion_time + processes[i].burst_time;
+        processes[i].turnaround_time = processes[i].completion_time - processes[i].arrival_time;
+        processes[i].response_time = processes[i].waiting_time;
+    }
+}
+void display_processes(struct Process processes[], int n) {
+
+        printf("TABLE:\n");
+    printf("PID\tArrival Time\tBurst Time\tCompletion Time\tTurnaround Time\tWaiting Time\tResponse Time\n");
+    for (int i = 0; i < n; i++) {
+        printf("P%d\t%d\t\t%d\t\t%d\t\t%d\t\t%d\t\t%d\n",
+               processes[i].id,
+               processes[i].arrival_time,
+               processes[i].burst_time,
+               processes[i].completion_time,
+               processes[i].turnaround_time,
+               processes[i].waiting_time,
+               processes[i].response_time);
+    }
+}
+
+int main() {
+    int n,np,quanta;
+
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
+
+    struct Process processes[n];
+     printf("1.FCFS\n2.sfj\n3.prioitty\n4.Round Robin\n");
+scanf("%d",&np);
+ if(np==2){
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i;
+        printf("Enter arrival time for process P%d: ", i);
+        scanf("%d", &processes[i].arrival_time);
+        printf("Enter burst time for process P%d: ", i );
+        scanf("%d", &processes[i].burst_time);
+
+        processes[i].completed = false;
+    }
+
+    calculate_times1(processes, n);
+     }
+   else if(np==3){ for (int i = 0; i < n; i++) {
+        processes[i].id = i ;
+        printf("Enter arrival time for process P%d: ", i );
+        scanf("%d", &processes[i].arrival_time);
+        printf("Enter burst time for process P%d: ", i );
+        scanf("%d", &processes[i].burst_time);
+         printf("Enter priority for process P%d: ", i );
+        scanf("%d", &processes[i].priority);
+
+        processes[i].completed = false;
+    }
+
+    calculate_times2(processes, n);
+     }
+    else if(np==1){
+                 for (int i = 0; i < n; i++) {
+        processes[i].id = i ;
+        printf("Enter arrival time for process P%d: ", i );
+        scanf("%d", &processes[i].arrival_time);
+        printf("Enter burst time for process P%d: ", i );
+        scanf("%d", &processes[i].burst_time);
+        processes[i].completed = false;
+    }
+
+    calculate_times3(processes, n);
+    }
+     else if(np==4)
+        {
+                 for (int i = 0; i < n; i++) {
+        processes[i].id = i ;
+        printf("Enter arrival time for process P%d: ", i );
+        scanf("%d", &processes[i].arrival_time);
+        printf("Enter burst time for process P%d: ", i );
+        scanf("%d", &processes[i].burst_time);
+
+        processes[i].completed = false;
+    }
+        printf("Enter the Time Quanta: ");
+        scanf("%d",&quanta);
+        roundRobin(processes,n,quanta);
+
+        }
+        printf("\n");
+
+        printf("\n");
+    display_processes(processes, n);
+        printf("\n");
+        if(np!=4)
+        printgantt(processes,n);
+        printf("\n");
+    float total_wt= 0, total_tt = 0, total_rt = 0, total_ct=0;
+    for (int i = 0; i < n; i++) {
+        total_wt+= processes[i].waiting_time;
+        total_tt += processes[i].turnaround_time;
+        total_rt += processes[i].response_time;
+        total_ct+= processes[i].completion_time;
+    }
+
+    printf("Average Waiting Time: %.2f\n", total_wt / n);
+    printf("Average Turnaround Time: %.2f\n", total_tt / n);
+    printf("Average Response Time: %.2f\n", total_rt / n);
+    printf("Average Completion Time: %.2f\n", total_ct / n);
+    return 0;
+}
