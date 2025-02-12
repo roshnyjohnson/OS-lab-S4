@@ -1,0 +1,85 @@
+//producer.c
+
+
+#include<stdio.h>
+#include<fcntl.h>
+#include<sys/mman.h>
+#include<sys/stat.h>
+#include<semaphore.h>
+#include<unistd.h>
+#include<stdlib.h>
+sem_t *e,*f,*s;
+int *buffer;
+int main()
+{
+    int fd,n=6,value=5,item=0;
+    sem_unlink("f");
+    sem_unlink("e");
+    sem_unlink("s");
+    shm_unlink("rosh");
+
+    fd=shm_open("rosh",O_CREAT|O_RDWR,0666);
+    ftruncate(fd,n*sizeof(int));
+    buffer=(int*)mmap(NULL,n*sizeof(int),PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    f=sem_open("f",O_CREAT,0666,0);
+    e=sem_open("e",O_CREAT,0666,n);
+    s=sem_open("s",O_CREAT,0666,1);
+    while(1)
+    {
+        sem_wait(e);
+        sem_wait(s);
+        buffer[item]=value;
+        printf("Produced item %d\n",buffer[item]);
+        sem_post(s);
+        item=(item+1)%n;
+        value+=6;
+        sem_post(f);
+        sleep(1);
+    }
+    sem_close(f);
+    sem_close(e);
+    sem_close(s);
+    shm_unlink("rosh");
+    return 0;
+}
+
+//consumer.c
+
+
+#include<stdio.h>
+#include<fcntl.h>
+#include<sys/mman.h>
+#include<sys/stat.h>
+#include<semaphore.h>
+#include<unistd.h>
+#include<stdlib.h>
+sem_t *e,*f,*s;
+int *buffer;
+int main()
+{
+    int fd,n=6,item=0,value;
+
+    fd=shm_open("rosh",O_CREAT|O_RDWR,0666);
+    ftruncate(fd,n*sizeof(int));
+    buffer=(int*)mmap(NULL,n*sizeof(int),PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    f=sem_open("f",O_CREAT,0666,0);
+    e=sem_open("e",O_CREAT,0666,n);
+    s=sem_open("s",O_CREAT,0666,1);
+    while(1)
+    {
+        sem_wait(f);sem_wait(s);
+        value=buffer[item];
+        printf("Consumed item %d\n",value);
+        sem_post(s);
+        item=(item+1)%n;
+        sem_post(e);
+        sleep(1);
+    }
+    sem_close(f);
+    sem_close(e);
+    sem_close(s);
+    shm_unlink("rosh");
+    return 0;
+}
+
+
