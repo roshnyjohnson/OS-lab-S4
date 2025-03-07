@@ -1,0 +1,268 @@
+struct process{
+    int at;
+    int ct;
+    int bt;
+    int id;
+    int wt;
+    int rt;
+    int tt;
+    int completed;
+    int st;
+    int priority;
+
+}p[10],r[10],q[10];
+void sjf(int n,struct process q[])
+{
+    printf("SJF");
+    int i,j,completed,currenttime;
+    struct process temp;
+    float tot_ct,tot_tt,tot_wt;
+    tot_ct=tot_tt=tot_wt=0;
+    for(i=0;i<n;i++)
+    {
+        q[i].completed=0;
+
+    }
+
+    currenttime=0;
+    completed=0;
+   for(i=0;i<n;i++)
+    {
+        for(j=0;j<n-i-1;j++)
+        {
+            if(q[j].at>q[j+1].at)
+            {
+                temp=q[j];
+                q[j]=q[j+1];
+                q[j+1]=temp;
+            }
+        }
+    }
+    for(i=0;i<n;i++)
+    {
+        for(j=0;j<n-i-1;j++)
+        {
+            if(q[j].bt>q[j+1].bt&&q[j].at==q[j+1].at)
+            {
+                temp=q[j];
+                q[j]=q[j+1];
+                q[j+1]=temp;
+            }
+        }
+    }
+    int totalburst=0;
+    for(i=0;i<n;i++)
+    {
+        totalburst+=q[i].bt;
+    }
+    printf("\n%d",0);
+    //int minimum=totalburst;
+    while(completed!=n)
+    {
+         int minimum=totalburst,min_index=-1;
+        for(i=0;i<n;i++)
+        {
+            if(q[i].completed==0&&q[i].at<=currenttime)
+            {
+                if(q[i].bt<minimum)
+                {
+                    minimum=q[i].bt;
+                    min_index=i;
+                }
+                if(q[i].bt==minimum)
+                {
+                    if(q[i].at<q[min_index].at)
+                    {
+                    minimum=q[i].bt;
+                    min_index=i;}
+                }
+            }
+
+        }
+        if(min_index==-1)
+        {
+            currenttime++;
+        }
+        else{
+            q[min_index].st=currenttime;
+            q[min_index].ct=q[min_index].st+q[min_index].bt;
+            q[min_index].tt=q[min_index].ct-q[min_index].at;
+            q[min_index].wt=q[min_index].tt-q[min_index].bt;
+            tot_ct +=q[min_index].ct;
+            tot_tt +=q[min_index].tt;
+            tot_wt +=q[min_index].wt;
+            completed++;
+            q[min_index].completed=1;
+            currenttime=q[min_index].ct;
+            printf("|P%d|%d",q[min_index].id,q[min_index].ct);
+
+
+
+        }
+    }
+    //printf("gnatt chart\n");
+    //printf("0");
+    /*for(i=0;i<n;i++)
+
+    {
+
+        printf("|%d|%d",p[i].id,p[i].ct);
+
+    }*/
+ printf("\n");
+    printf("the average completion time is %.2f\n",(float)tot_ct/n);
+    printf("the average tt ime is %.2f\n",(float)tot_tt/n);
+    printf("the average waiting time is %.2f\n",(float)tot_wt/n);
+
+
+    printf("\npid\tarrivaltime\tbursttime\tcompletiontimr\t\ttat\t\twaitingtime\n");
+    for(i=0;i<n;i++)
+    {
+        printf("\n%d\t\t%d\t\t%d\t\t%d\t\t%d\t\t%d\n",q[i].id,q[i].at,q[i].bt,q[i].ct,q[i].tt,q[i].wt);
+    }
+
+
+
+}
+void prior(int n,struct process r[])
+{
+    printf("PRIORITY");
+    int i,j,completed,currenttime;
+    struct process temp;
+    float tot_ct,tot_tt,tot_wt;
+    tot_ct=tot_tt=tot_wt=0;
+    for(i=0;i<n;i++)
+    {
+        r[i].completed=0;
+
+    }
+
+    currenttime=0;
+    completed=0;
+   for(i=0;i<n;i++)
+    {
+        for(j=0;j<n-i-1;j++)
+        {
+            if(r[j].at>r[j+1].at)
+            {
+                temp=r[j];
+                r[j]=r[j+1];
+                r[j+1]=temp;
+            }
+        }
+    }
+    for(i=0;i<n;i++)
+    {
+        for(j=0;j<n-i-1;j++)
+        {
+            if(r[j].bt>r[j+1].bt&&r[j].at==r[j+1].at)
+            {
+                temp=r[j];
+                r[j]=r[j+1];
+                r[j+1]=temp;
+            }
+        }
+    }
+    int totalburst=0;
+    /*for(i=0;i<n;i++)
+    {
+        totalburst+=r[i].bt;
+    }*/
+    printf("\n%d",0);
+    //int minimum=totalburst;
+    while(completed!=n)
+    {
+         int max_priority=100000,min_index=-1;
+        for(i=0;i<n;i++)
+        {
+            if(r[i].completed==0&&r[i].at<=currenttime)
+            {
+                if(r[i].priority<max_priority)
+                {
+                    max_priority=r[i].priority;
+                    min_index=i;
+                }
+                /*if(r[i].bt==max_priority)
+                {
+                    if(r[i].at<r[min_index].at)
+                    {
+                    max_priority=r[i].bt;
+                    min_index=i;}
+                }*/
+            }
+
+        }
+        if(min_index==-1)
+        {
+            currenttime++;
+        }
+        else{
+            r[min_index].st=currenttime;
+            r[min_index].ct=r[min_index].st+r[min_index].bt;
+            r[min_index].tt=r[min_index].ct-r[min_index].at;
+            r[min_index].wt=r[min_index].tt-r[min_index].bt;
+            tot_ct +=r[min_index].ct;
+            tot_tt +=r[min_index].tt;
+            tot_wt +=r[min_index].wt;
+            completed++;
+            r[min_index].completed=1;
+            currenttime=r[min_index].ct;
+            printf("|P%d|%d",r[min_index].id,r[min_index].ct);
+
+
+
+        }
+    }
+    //printf("gnatt chart\n");
+    //printf("0");
+    /*for(i=0;i<n;i++)
+
+    {
+
+        printf("|%d|%d",p[i].id,p[i].ct);
+
+    }*/
+ printf("\n");
+    printf("the average completion time is %.2f\n",(float)tot_ct/n);
+    printf("the average tt ime is %.2f\n",(float)tot_tt/n);
+    printf("the average waiting time is %.2f\n",(float)tot_wt/n);
+
+
+    printf("\npid\tarrivaltime\tbursttime\tcompletiontimr\t\ttat\t\twaitingtime\n");
+    for(i=0;i<n;i++)
+    {
+        printf("\n%d\t\t%d\t\t%d\t\t%d\t\t%d\t\t%d\n",r[i].id,r[i].at,r[i].bt,r[i].ct,r[i].tt,r[i].wt);
+    }
+
+
+
+}
+int main()
+{
+    int n,i,j,tot_wt,tot_tt,tot_ct;
+    printf("enter the number of processes");
+    scanf("%d",&n);
+    printf("enter the process id,arrival time, burst time,priority in order \n");
+    for(i=0;i<n;i++)
+    {
+        printf("enter the pid for %d",i+1);
+        scanf("%d",&p[i].id);
+        printf("enter the at for %d",i+1);
+        scanf("%d",&p[i].at);
+        printf("enter the bt for %d",i+1);
+        scanf("%d",&p[i].bt);
+        printf("enter the priorityfor %d",i+1);
+        scanf("%d",&p[i].priority);
+
+    }
+    for(i=0;i<n;i++)
+    {
+    q[i] =p[i];
+    r[i]=p[i];
+
+}
+    //tot_tt=tot_wt=tot_ct=0;
+    //fcfs(n,p);
+    sjf(n,q);
+    prior(n,r);
+}
