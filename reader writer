@@ -1,0 +1,71 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+struct semaphore {
+    int value;
+};
+
+void wait(struct semaphore *s) {
+    while (s->value <= 0);
+    s->value--;
+}
+
+void signal(struct semaphore *s) {
+    s->value++;
+}
+
+struct semaphore wrt = {1}; // Ensures exclusive access to writers
+struct semaphore mutex = {1}; // Ensures mutual exclusion for read_count
+int read_count = 0; // Number of active readers
+
+void *reader(void *arg) {
+    while (1) {
+        wait(&mutex); // Lock access to read_count
+        read_count++;
+        if (read_count == 1) {
+            wait(&wrt); // First reader blocks writers
+        }
+        signal(&mutex); // Release access to read_count
+
+        // Reading section
+        printf("Reader %d is reading...\n", *(int *)arg);
+        sleep(1);
+
+        wait(&mutex);
+        read_count--;
+        if (read_count == 0) {
+            signal(&wrt); // Last reader allows writers
+        }
+        signal(&mutex);
+
+        sleep(2); // Simulate delay between reads
+    }
+}
+
+void *writer(void *arg) {
+    while (1) {
+        wait(&wrt); // Ensure exclusive access
+        printf("Writer %d is writing...\n", *(int *)arg);
+        sleep(2); // Simulate writing
+        signal(&wrt); // Release access
+        sleep(3); // Simulate delay between writes
+    }
+}
+
+int main() {
+    pthread_t r1, r2, w1, w2;
+    int id1 = 1, id2 = 2;
+
+    pthread_create(&r1, NULL, reader, &id1);
+    pthread_create(&r2, NULL, reader, &id2);
+    pthread_create(&w1, NULL, writer, &id1);
+    pthread_create(&w2, NULL, writer, &id2);
+
+    pthread_join(r1, NULL);
+    pthread_join(r2, NULL);
+    pthread_join(w1, NULL);
+    pthread_join(w2, NULL);
+
+    return 0;
+}
