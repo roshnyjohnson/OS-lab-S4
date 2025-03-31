@@ -55,7 +55,7 @@ void *consumer(void*arg)
     signal(&mutex);
     signal(&empty);
 
-    sleep(2);}
+    sleep(1);}
 }
 int main()
 {
